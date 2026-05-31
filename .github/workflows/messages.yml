@@ -470,6 +470,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GH_GLOBAL || secrets.GITHUB_TOKEN }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_ALLOWED_CHAT_IDS: ${{ secrets.TELEGRAM_ALLOWED_CHAT_IDS }}
           DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
           DISCORD_CHANNEL_ID: ${{ secrets.DISCORD_CHANNEL_ID }}
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
@@ -478,7 +479,8 @@ jobs:
           MESSAGES='[]'
 
           # --- Telegram (collect ALL pending updates) ---
-          if [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ]; then
+          TG_ALLOWED_IDS="${TELEGRAM_ALLOWED_CHAT_IDS:-${TELEGRAM_CHAT_ID:-}}"
+          if [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "$TG_ALLOWED_IDS" ]; then
             RESPONSE=$(curl -s "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getUpdates?timeout=0&allowed_updates=%5B%22message%22%5D")
             COUNT=$(echo "$RESPONSE" | jq '.result | length')
             MAX_UPDATE_ID=""
@@ -488,8 +490,8 @@ jobs:
               CHAT=$(echo "$RESPONSE" | jq -r ".result[$i].message.chat.id // empty")
               UPDATE_ID=$(echo "$RESPONSE" | jq -r ".result[$i].update_id // empty")
 
-              if [ -n "$TEXT" ] && [ "$CHAT" = "$TELEGRAM_CHAT_ID" ]; then
-                MESSAGES=$(echo "$MESSAGES" | jq --arg src "telegram" --arg txt "$TEXT" '. + [{source: $src, text: $txt}]')
+              if [ -n "$TEXT" ] && echo ",$TG_ALLOWED_IDS," | grep -q ",$CHAT,"; then
+                MESSAGES=$(echo "$MESSAGES" | jq --arg src "telegram:$CHAT" --arg txt "$TEXT" '. + [{source: $src, text: $txt}]')
                 echo "Telegram: $TEXT"
               fi
               MAX_UPDATE_ID="$UPDATE_ID"
@@ -626,6 +628,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GH_GLOBAL || secrets.GITHUB_TOKEN }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_ALLOWED_CHAT_IDS: ${{ secrets.TELEGRAM_ALLOWED_CHAT_IDS }}
           DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
           DISCORD_CHANNEL_ID: ${{ secrets.DISCORD_CHANNEL_ID }}
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
@@ -646,10 +649,14 @@ jobs:
           #!/usr/bin/env bash
           set -euo pipefail
           MSG="$1"
-          if [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ]; then
+          CHAT_TARGET="${TELEGRAM_CHAT_ID:-}"
+          case "${_MSG_SOURCE:-}" in
+            telegram:*) CHAT_TARGET="${_MSG_SOURCE#telegram:}" ;;
+          esac
+          if [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "$CHAT_TARGET" ]; then
             curl -sf -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
               -H "Content-Type: application/json" \
-              -d "$(jq -n --arg chat "$TELEGRAM_CHAT_ID" --arg text "$MSG" '{chat_id: $chat, text: $text, parse_mode: "Markdown"}')" > /dev/null || true
+              -d "$(jq -n --arg chat "$CHAT_TARGET" --arg text "$MSG" '{chat_id: $chat, text: $text, parse_mode: "Markdown"}')" > /dev/null || true
           fi
           if [ -n "${DISCORD_WEBHOOK_URL:-}" ]; then
             curl -sf -X POST "$DISCORD_WEBHOOK_URL" \
