@@ -6,8 +6,6 @@ Input comes from `var`.
 
 Do the user's requested task directly. If the user asks for a simple reply, reply exactly and briefly.
 
-At the end, always produce a concise final answer. Also call:
-
-./notify "your final answer"
+At the end, always produce a concise final answer.
 
 Never stay silent.
