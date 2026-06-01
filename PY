@@ -1,0 +1,25 @@
+from pathlib import Path
+import re
+wf = Path'.github/workflows/aeon.yml'
+s = wf.readtext
+if 'OPENROUTERAPIKEY' not in s
+    s = s.replace'          BANKRLLMKEY  secrets.BANKRLLMKEY n          GITHUBTOKEN' '          BANKRLLMKEY  secrets.BANKRLLMKEY n          OPENROUTERAPIKEY  secrets.OPENROUTERAPIKEY n          GITHUBTOKEN'
+old = '          echo "noticeRouting through Bankr Gateway https//llm.bankr.bot"n        elsen          echo "noticeUsing direct Anthropic API"n        fi'
+new = '          echo "noticeRouting through Bankr Gateway https//llm.bankr.bot"n        elif  "GATEWAY" = "openrouter"  thenn          if  -z "OPENROUTERAPIKEY-"  thenn            echo "errorgateway.provider=openrouter but OPENROUTERAPIKEY secret is not set"n            exit 1n          fin          export ANTHROPICBASEURL="https//openrouter.ai/api"n          export ANTHROPICAUTHTOKEN="OPENROUTERAPIKEY"n          export ANTHROPICAPIKEY=""n          unset CLAUDECODEOAUTHTOKENn          echo "noticeRouting through OpenRouter https//openrouter.ai/api"n        elsen          echo "noticeUsing direct Anthropic API"n        fi'
+if 'GATEWAY" = "openrouter' not in s
+    if old not in s
+        raise SystemExit'routing block not found'
+    s = s.replaceold new 1
+wf.writetexts
+conf = Path'aeon.yml'
+t = conf.readtext
+if re.searchr'mgateway' t
+    t = re.subr'msgatewayn t.*n*' 'gatewayn  provider openroutern' t count=1
+else
+    t = 'gatewayn  provider openrouternn' + t
+conf.writetextt
+print'patched openrouter'
+PY
+python3 /tmp/patchaeon.py
+
+
