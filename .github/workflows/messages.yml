@@ -703,7 +703,17 @@ jobs:
           - For anything else, do your best and explain what you did.
 
           Always send your response back via ./notify so the user sees it."
-          if ! CLAUDE_OUTPUT=$(echo "$PROMPT" | claude -p - \
+                    export OPENROUTER_API_KEY="${{ secrets.OPENROUTER_API_KEY }}"
+          export ANTHROPIC_BASE_URL="https://openrouter.ai/api"
+          export ANTHROPIC_AUTH_TOKEN="$OPENROUTER_API_KEY"
+          export ANTHROPIC_API_KEY=""
+          export ANTHROPIC_DEFAULT_OPUS_MODEL="~anthropic/claude-opus-latest"
+          export ANTHROPIC_DEFAULT_SONNET_MODEL="~anthropic/claude-sonnet-latest"
+          export ANTHROPIC_DEFAULT_HAIKU_MODEL="~anthropic/claude-haiku-latest"
+          unset CLAUDE_CODE_OAUTH_TOKEN
+          echo "OpenRouter secret length: ${#OPENROUTER_API_KEY}"
+          echo "Anthropic base URL: $ANTHROPIC_BASE_URL"
+if ! CLAUDE_OUTPUT=$(echo "$PROMPT" | claude -p - \
             --model "$MODEL" --allowedTools "$ALLOWED" \
             --output-format json 2>&1); then
             echo "::error::Claude CLI failed. Output: $CLAUDE_OUTPUT"
