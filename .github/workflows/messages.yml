@@ -651,9 +651,11 @@ jobs:
           MSG="$1"
           CHAT_TARGET="${TELEGRAM_CHAT_ID:-}"
           case "${_MSG_SOURCE:-}" in
-            telegram:*) CHAT_TARGET="${_MSG_SOURCE#telegram:}" ;;
+            telegram:*) CHAT_TARGET="${_MSG_SOURCE#telegram:}"
+        [ -z "$CHAT_TARGET" ] && CHAT_TARGET="${TELEGRAM_CHAT_ID:-}" ;;
           esac
-          if [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "$CHAT_TARGET" ]; then
+          CHAT_TARGET="${CHAT_TARGET:-${TELEGRAM_CHAT_ID:-}}"
+      if [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "$CHAT_TARGET" ]; then
             curl -sf -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
               -H "Content-Type: application/json" \
               -d "$(jq -n --arg chat "$CHAT_TARGET" --arg text "$MSG" '{chat_id: $chat, text: $text, parse_mode: "Markdown"}')" > /dev/null || true
