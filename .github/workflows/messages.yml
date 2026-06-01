@@ -702,7 +702,11 @@ jobs:
             exit 1
           fi
 
-          echo "$CLAUDE_OUTPUT" | jq -r '.result // empty'
+          RESULT="$(echo "$CLAUDE_OUTPUT" | jq -r '.result // empty')"
+          echo "$RESULT"
+          if [ -n "$RESULT" ]; then
+            ./notify "$RESULT"
+          fi
 
           INPUT_TOKENS=$(echo "$CLAUDE_OUTPUT" | jq '.usage.input_tokens // 0')
           OUTPUT_TOKENS=$(echo "$CLAUDE_OUTPUT" | jq '.usage.output_tokens // 0')
