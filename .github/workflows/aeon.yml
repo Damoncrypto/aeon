@@ -493,6 +493,22 @@ jobs:
           Use this variable (override the default in the skill file):
           var=$VAR"
           fi
+          # Force OpenRouter before Claude CLI
+          if [ -n "${OPENROUTER_API_KEY:-}" ]; then
+            export ANTHROPIC_BASE_URL="https://openrouter.ai/api"
+            export ANTHROPIC_AUTH_TOKEN="$OPENROUTER_API_KEY"
+            export ANTHROPIC_API_KEY=""
+            unset CLAUDE_CODE_OAUTH_TOKEN
+            case "$MODEL" in
+              claude-opus*|opus*) MODEL="~anthropic/claude-opus-latest" ;;
+              claude-sonnet*|sonnet*) MODEL="~anthropic/claude-sonnet-latest" ;;
+              claude-haiku*|haiku*) MODEL="~anthropic/claude-haiku-latest" ;;
+            esac
+            echo "Routing through OpenRouter"
+            echo "OpenRouter secret length: ${#OPENROUTER_API_KEY}"
+            echo "Anthropic base URL: $ANTHROPIC_BASE_URL"
+            echo "Using model after gateway mapping: $MODEL"
+          fi
           if ! CLAUDE_OUTPUT=$(echo "$PROMPT" | claude -p - \
             --model "$MODEL" --allowedTools "$ALLOWED" \
             --output-format json 2>&1); then
@@ -505,6 +521,13 @@ jobs:
           # Extract and print the text result so logs still show skill output
           RESULT_TEXT=$(echo "$CLAUDE_OUTPUT" | jq -r '.result // empty')
           echo "$RESULT_TEXT"
+          # Direct Telegram reply fallback
+          if [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ] && [ -n "$RESULT_TEXT" ]; then
+            TG_RESP=$(curl -sS -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+              -H "Content-Type: application/json" \
+              -d "$(jq -n --arg chat "$TELEGRAM_CHAT_ID" --arg text "$RESULT_TEXT" '{chat_id:$chat,text:$text,disable_web_page_preview:true}')" || true)
+            echo "Telegram direct reply response: $TG_RESP"
+          fi
           # Save result for output capture step
           echo "$RESULT_TEXT" > /tmp/skill-result.txt
 
