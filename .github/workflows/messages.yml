@@ -702,7 +702,13 @@ jobs:
             exit 1
           fi
 
-          RESULT="$(echo "$CLAUDE_OUTPUT" | jq -r '.result // empty')"
+          RESULT=$(echo "$CLAUDE_OUTPUT" | jq -r '.result // empty')
+          echo "$RESULT"
+          if [ -n "$RESULT" ]; then
+            ./notify "$RESULT"
+          else
+            ./notify "Aeon 已运行完成，但没有生成文本结果。Run: https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          fi
           echo "$RESULT"
           if [ -n "$RESULT" ]; then
             ./notify "$RESULT"
